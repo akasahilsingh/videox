@@ -60,9 +60,13 @@ const registerUser = asyncHandler(async (req, res) => {
     coverImage: coverImageOnCloudinary?.url || "",
   });
 
+  const registeredUser = await User.findById(user._id).select(
+    "-password -refreshToken",
+  );
+
   res
     .status(201)
-    .json(new ApiResponse(201, user, "User successfully registered"));
+    .json(new ApiResponse(201, registeredUser, "User successfully registered"));
 });
 
 const loginUser = asyncHandler(async (req, res) => {
@@ -94,6 +98,10 @@ const loginUser = asyncHandler(async (req, res) => {
 
   const { accessToken, refreshToken } =
     await generateAccessTokenAndRefreshToken(user._id);
+
+  const loggedInUser = await User.findById(user._id).select(
+    "-password -refreshToken",
+  );
   const options = {
     httpOnly: true,
     secure: true,
@@ -106,10 +114,37 @@ const loginUser = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
-        { user, accessToken, refreshToken },
+        { loggedInUser, accessToken, refreshToken },
         "Login successfull",
       ),
     );
 });
 
-export { registerUser, loginUser };
+const logoutUser = asyncHandler(async (req, res) => {
+  const { decoded } = req.user;
+  await User.findOneAndUpdate(
+    decoded?._id,
+    {
+      $unset: {
+        refreshToken: 1,
+      },
+    },
+    {
+      new: true,
+    },
+  );
+
+  const options = {
+    httpOnly: true,
+    secure: true,
+    sameSite: "strict",
+  };
+  
+
+  res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "User logged out successfully"));
+});
+export { registerUser, loginUser, logoutUser };
