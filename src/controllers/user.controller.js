@@ -183,5 +183,46 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       ),
     );
 });
-export { registerUser, loginUser, logoutUser, refreshAccessToken };
 
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+
+  if (!oldPassword || !newPassword) {
+    throw new ApiError(400, "Old and new passwords are required to continue");
+  }
+
+  if (oldPassword === newPassword) {
+    throw new ApiError(400, "Old and new password must be different");
+  }
+
+  const user = await User.findById(req.user?._id);
+
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
+
+  if (!isPasswordCorrect) {
+    throw new ApiError(400, "Invalid Password");
+  }
+
+  user.password = newPassword;
+  user.refreshToken = undefined;
+
+  await user.save({ validateBeforeSave: false });
+
+  res
+    .status(200)
+    .json(
+      new ApiResponse(200, {}, "Password changed successfully. Login again"),
+    );
+});
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refreshAccessToken,
+  changeCurrentPassword,
+};
