@@ -4,6 +4,7 @@ import { loginUser } from "../controllers/user.controller.js";
 import { logoutUser } from "../controllers/user.controller.js";
 import { upload } from "../middleware/multer.middleware.js";
 import { verifyJwt } from "../middleware/auth.middleware.js";
+import { refreshAccessToken } from "../controllers/user.controller.js"
 
 const router = express.Router();
 
@@ -16,7 +17,7 @@ router.route("/register").post(
 );
 
 router.route("/login").post(loginUser);
-
+router.route("/refresh-token").post(refreshAccessToken)
 
 // Protected routes
 
