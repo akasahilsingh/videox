@@ -219,10 +219,69 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     );
 });
 
+const getCurrentUser = asyncHandler(async (req, res) => {
+  res
+    .status(200)
+    .json(new ApiResponse(200, req.user, "User fetched successfully"));
+});
+
+const updateAccountDetails = asyncHandler(async (req, res) => {
+  const { userName, email } = req.body;
+
+  if (!userName && !email) {
+    throw new ApiError(401, "All fields are required");
+  }
+
+  let updateFields = {};
+
+  if (userName?.trim()) {
+    const isUserNameAlreadyAvailable = await User.findOne({
+      userName,
+      _id: { $ne: req.user?._id },
+    });
+    if (isUserNameAlreadyAvailable) {
+      throw new ApiError(
+        409,
+        "This user name is already taken try something else",
+      );
+    }
+
+    updateFields.userName = userName.toLowerCase().trim();
+  }
+
+  if (email?.trim()) {
+    const isEmailAlreadyAvailable = await User.findOne({
+      email,
+      _id: { $ne: req.user?._id },
+    });
+
+    if (isEmailAlreadyAvailable) {
+      throw new ApiError(409, "This email is already taken try something else");
+    }
+
+    updateFields.email = email.toLowerCase().trim();
+  }
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: updateFields,
+    },
+    {
+      new: true,
+    },
+  ).select("-password");
+
+  res
+    .status(201)
+    .json(new ApiResponse(201, { user }, "Details updated successfully"));
+});
+
 export {
   registerUser,
   loginUser,
   logoutUser,
   refreshAccessToken,
   changeCurrentPassword,
+  getCurrentUser,
+  updateAccountDetails,
 };
