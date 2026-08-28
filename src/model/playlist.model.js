@@ -9,14 +9,13 @@ const playListSchema = new Schema(
     },
     description: {
       type: String,
+      required: true,
       trim: true,
     },
     videos: [
       {
-        video: {
-          type: Schema.Types.ObjectId,
-          ref: "Video",
-        },
+        type: Schema.Types.ObjectId,
+        ref: "Video",
       },
     ],
     owner: {
