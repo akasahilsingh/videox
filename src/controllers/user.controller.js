@@ -4,6 +4,7 @@ import { ApiError } from "../utils/apiError.js";
 import { User } from "../model/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
+import { v2 as cloudinary } from "cloudinary";
 
 const generateAccessTokenAndRefreshToken = async (userId) => {
   try {
@@ -16,6 +17,16 @@ const generateAccessTokenAndRefreshToken = async (userId) => {
   } catch (error) {
     // throw new ApiError(500, "Error while genrating access and refresh tokens")
     console.log(error.message);
+  }
+};
+
+const deleteImgOnCloudinary = async (publicId) => {
+  try {
+    const res = await cloudinary.uploader.destroy(publicId);
+
+    return res;
+  } catch (error) {
+    throw new ApiError(500, error?.message || "Unable to delete the image");
   }
 };
 
@@ -157,7 +168,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   } catch (error) {
     throw new ApiError(401, error?.message || "Unable to verify token");
   }
-  console.log("decoded: ", decoded);
+  // console.log("decoded: ", decoded);
   const user = await User.findById(decoded?._id);
 
   if (!user) {
@@ -276,6 +287,64 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, { user }, "Details updated successfully"));
 });
 
+const updateUserAvatar = asyncHandler(async (req, res) => {
+  const avatarLocalPath = req.file?.path;
+
+  if (!avatarLocalPath) {
+    throw new ApiError(400, "Avatar file is missing");
+  }
+
+  const user = await User.findById(req.user?._id);
+
+  if (!user) {
+    throw new ApiError(404, "Unable to find user");
+  }
+
+  const cloudUploadResponse = await uploadOnCloudinary(avatarLocalPath);
+
+  if (!cloudUploadResponse || !cloudUploadResponse.url) {
+    throw new ApiError(500, "Failed to upload the new avatar to cloud");
+  }
+
+  if (user.avatar) {
+    const rawPath = user?.avatar.split("/upload/")[1];
+    if (rawPath) {
+      const publicId = rawPath
+        ?.replace(/^v\d+\//, "")
+        ?.replace(/\.[^/.]+$/, "");
+      if (publicId) {
+        await deleteImgOnCloudinary(publicId);
+      }
+    }
+  }
+
+  // console.log("rawPath: ", rawPath)
+  // if (!rawPath) {
+  //   throw new ApiError(400, "Not able to get old avatar link");
+  // }
+
+  // // console.log(publicId);
+
+  // if (!publicId) {
+  //   throw new ApiError(400, "avatar is not available");
+  // }
+
+  const updatedAvatar = cloudUploadResponse?.url;
+  user.avatar = updatedAvatar;
+  await user.save({ validateBeforeSave: false });
+  res
+    .status(201)
+    .json(
+      new ApiResponse(
+        201,
+        { updatedAvatar },
+        "Successfully updated avatar image",
+      ),
+    );
+});
+
+const updateUserCoverImage = asyncHandler(async (req, res) => {});
+
 export {
   registerUser,
   loginUser,
@@ -284,4 +353,6 @@ export {
   changeCurrentPassword,
   getCurrentUser,
   updateAccountDetails,
+  updateUserAvatar,
+  updateUserCoverImage,
 };
