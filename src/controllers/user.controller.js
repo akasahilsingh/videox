@@ -318,17 +318,6 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     }
   }
 
-  // console.log("rawPath: ", rawPath)
-  // if (!rawPath) {
-  //   throw new ApiError(400, "Not able to get old avatar link");
-  // }
-
-  // // console.log(publicId);
-
-  // if (!publicId) {
-  //   throw new ApiError(400, "avatar is not available");
-  // }
-
   const updatedAvatar = cloudUploadResponse?.url;
   user.avatar = updatedAvatar;
   await user.save({ validateBeforeSave: false });
@@ -343,7 +332,51 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     );
 });
 
-const updateUserCoverImage = asyncHandler(async (req, res) => {});
+const updateUserCoverImage = asyncHandler(async (req, res) => {
+  const coverImageLocalPath = req.file?.path;
+
+  if (!coverImageLocalPath) {
+    throw new ApiError(400, "Upload cover image to update");
+  }
+
+  const user = await User.findById(req.user?._id);
+
+  if (!user) {
+    throw new ApiError(404, "Unable to find the user");
+  }
+
+  const cloudUploadResponse = await uploadOnCloudinary(coverImageLocalPath);
+
+  if (!cloudUploadResponse || !cloudUploadResponse.url) {
+    throw new ApiError(500, "Unable to upload new cover image");
+  }
+
+  if (user.coverImage) {
+    const rawPath = user?.coverImage.split("/upload/")[1];
+    if (rawPath) {
+      const publicId = rawPath
+        ?.replace(/^v\d+\//, "")
+        ?.replace(/\.[^/.]+$/, "");
+      if (publicId) {
+        await deleteImgOnCloudinary(publicId);
+      }
+    }
+  }
+
+  const updatedCoverImage = cloudUploadResponse?.url;
+  user.coverImage = updatedCoverImage;
+  await user.save({ validateBeforeSave: false });
+
+  res
+    .status(201)
+    .json(
+      new ApiResponse(
+        201,
+        { updatedCoverImage },
+        "Successfully updated cover image",
+      ),
+    );
+});
 
 export {
   registerUser,
