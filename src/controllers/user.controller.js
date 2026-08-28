@@ -287,6 +287,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, { user }, "Details updated successfully"));
 });
 
+// Edge Case missed if deleteCloudinaryImg fail then that asset link will remain unallocated
 const updateUserAvatar = asyncHandler(async (req, res) => {
   const avatarLocalPath = req.file?.path;
 
@@ -378,6 +379,10 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     );
 });
 
+const getUserChannelProfile = asyncHandler(async (req, res) => {});
+
+const getWatchHistory = asyncHandler(async (req, res) => {});
+
 export {
   registerUser,
   loginUser,
@@ -388,4 +393,6 @@ export {
   updateAccountDetails,
   updateUserAvatar,
   updateUserCoverImage,
+  getUserChannelProfile,
+  getWatchHistory,
 };

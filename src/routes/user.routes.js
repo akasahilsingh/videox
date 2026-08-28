@@ -1,5 +1,7 @@
 import express from "express";
 import {
+  getUserChannelProfile,
+  getWatchHistory,
   registerUser,
   updateAccountDetails,
   updateUserAvatar,
@@ -38,5 +40,8 @@ router
 router
   .route("/update-cover-img")
   .patch(verifyJwt, upload.single("coverImg"), updateUserCoverImage);
+
+router.route("/channel-profile").get(verifyJwt, getUserChannelProfile);
+router.route("/watch-history").get(verifyJwt, getWatchHistory);
 
 export default router;
